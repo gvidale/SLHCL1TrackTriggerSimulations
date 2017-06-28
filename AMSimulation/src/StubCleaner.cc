@@ -218,7 +218,8 @@ int StubCleaner::cleanStubs(TString src, TString out) {
 
             bool picked = picky_ -> applyCuts(lay16, deltaPhi, deltaR, deltaZ);
             if (!po_.picky || (po_.picky && picked) ) {
-                unsigned rank = picky_ -> findRank(lay16, stub_r, stub_z);
+//                unsigned rank = picky_ -> findRank(lay16, stub_r, stub_z); //RR commenting out the rank classification.
+            	unsigned rank = 0; // Just for backward compatibility
 
                 float deltaX = stub_r * (std::cos(stub_phi) - std::cos(idealPhi));
                 float deltaY = stub_r * (std::sin(stub_phi) - std::sin(idealPhi));
