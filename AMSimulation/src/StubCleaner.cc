@@ -134,9 +134,11 @@ int StubCleaner::cleanStubs(TString src, TString out) {
         float simChargeOverPt = float(simCharge)/simPt;
 
         // Apply trigger tower phase space cuts
-        int aux_TT = TrackParametersToTT().get_tt(simPhi, simChargeOverPt, simEta, simVz);
-        if (aux_TT != (int) po_.tower)
-            keep = false;
+//        int aux_TT = TrackParametersToTT().get_tt(simPhi, simChargeOverPt, simEta, simVz);
+//        if (aux_TT != (int) po_.tower)
+//            keep = false;
+//        HACK: REMOVED CHECK TO PASS THE OUTPUT TO TOWER GENERATOR SCRIPT.
+//        REMEMBER TO REVERT THE CHANGE AFTER USE!!!
 
         // Apply pt, eta, phi requirements
         bool sim = (po_.minPt  <= simPt  && simPt  <= po_.maxPt  &&
