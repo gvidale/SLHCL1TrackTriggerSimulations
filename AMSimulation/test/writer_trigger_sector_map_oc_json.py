@@ -15,10 +15,11 @@ from ROOT import TFile, TTree
 
 # Input single-muon file covering the full tracker
 #stubs_input_file = "/uscms_data/d2/jiafu/L1TrackTrigger/CRAB_amsim_SLHC25p3_naper/tt48/stubs_tt48_50M.0.root"
-stubs_input_file = "root://cmsxrootd.fnal.gov//store/user/l1upgrades/SLHC/GEN/620_SLHC25p3_results/jftest1/ocerri_20161003/stubs_tt48_50M.0.root"
+# stubs_input_file = "root://cmsxrootd.fnal.gov//store/user/l1upgrades/SLHC/GEN/620_SLHC25p3_results/jftest1/ocerri_20161003/stubs_tt48_50M.0.root"
+stubs_input_file = "root://cmsxrootd.fnal.gov//store/user/l1upgrades/SLHC/GEN/920/SingleMu/WholeTracker/ParticleGuns/Stubs/170613_044226/PGun_pt2_Tilted_TkOnly_Stubs.root"
 
 # Configurations
-nentries = 20e6
+nentries = 50e6
 #nentries = 10e3
 rStarPhi = 90.
 rStarEta = 60.
