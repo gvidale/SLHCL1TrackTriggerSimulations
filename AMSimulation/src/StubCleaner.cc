@@ -105,7 +105,8 @@ int StubCleaner::cleanStubs(TString src, TString out) {
 
         if (nstubs > 100) {
             std::cout << Error() << "Way too many stubs: " << nstubs << std::endl;
-            return 1;
+//            return 1;
+            continue; //GV - Ignore the event with too many stubs. 07/05/'17
         }
 
         // _____________________________________________________________________
