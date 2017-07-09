@@ -292,4 +292,4 @@ int PatternGenerator::run() {
     Timing();
 
     return exitcode;
-}
+} // GV test eclipse git sync
