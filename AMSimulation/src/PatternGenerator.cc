@@ -88,7 +88,7 @@ int PatternGenerator::makePatterns(TString src) {
             ++nRead;
             continue;
         }
-        assert(nstubs == po_.nLayers);
+        assert(ngoodstubs == po_.nLayers); //GV - change assert, ngoodstubs must be equal to nLayers, not nstubs!
 
 
         // _____________________________________________________________________
