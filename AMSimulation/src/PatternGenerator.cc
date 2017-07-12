@@ -58,6 +58,11 @@ int PatternGenerator::makePatterns(TString src) {
         const unsigned nstubs = reader.vb_modId->size();
         if (verbose_>2)  std::cout << Debug() << "... evt: " << ievt << " # stubs: " << nstubs << std::endl;
 
+//      GV -  Ignore event if #stubs > nLayer (AM can't handle more than that anyway')
+        if (nstubs > po_.nLayers) {
+        	if (verbose_>1) std::cout << "ERROR: #stubs > nLayers -> event ignored " << "... evt: " << ievt << " #stubs: " << nstubs << std::endl;
+        	continue;
+        }
         // Get sim info
         float simPt           = reader.vp_pt->front();
         float simEta          = reader.vp_eta->front();
@@ -88,7 +93,7 @@ int PatternGenerator::makePatterns(TString src) {
             ++nRead;
             continue;
         }
-        assert(ngoodstubs == po_.nLayers); //GV - change assert, ngoodstubs must be equal to nLayers, not nstubs!
+        assert(nstubs == po_.nLayers);
 
 
         // _____________________________________________________________________
