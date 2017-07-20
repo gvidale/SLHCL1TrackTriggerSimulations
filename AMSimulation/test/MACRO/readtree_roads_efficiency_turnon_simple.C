@@ -91,7 +91,7 @@ void readtree_roads::Loop(TString key)
 		// if (Cut(ientry) < 0) continue;
 
 		if (jentry % 500 == 0) cout << "@@@ event " << jentry << " ... Roads fired 'til now: " << average_roads_fired << endl;
-
+//		if(jentry==20) break;
 		roads_before_reconstruction = 0;
 
 //		APPLY PHASE SPACE CUT  (trkPart 0)
@@ -120,6 +120,8 @@ void readtree_roads::Loop(TString key)
 		for (Int_t patt_count=0; patt_count<n_roads_fired; ++patt_count){
 
 			genuine_mu = 0;
+//			Erase the setOfLayer, before checking new road
+			setOflayers.erase(setOflayers.begin(),setOflayers.end());
 
 			//LOOP OVER layers for each pattern
 			Int_t l=(*AMTTRoads_stubRefs)[patt_count].size();
@@ -128,10 +130,10 @@ void readtree_roads::Loop(TString key)
 
 				//LOOP OVER STUBS LIST for that layer, in that pattern, for that event.
 				n_stubs=(*AMTTRoads_stubRefs)[patt_count][l].size();
+//				cout<<n_stubs <<endl;
 				for (Int_t stub_count = 0; stub_count< n_stubs; ++stub_count){
 
 					stub_index=(*AMTTRoads_stubRefs)[patt_count][l][stub_count];
-
 					trk_index=TTStubs_tpId->at(stub_index);
 
 //					if that trkpart is trk 0, go ahead
@@ -166,18 +168,15 @@ void readtree_roads::Loop(TString key)
 			if(patt_count==n_roads_fired-1){
 				evt_not_reconstructed++;
 			}
+
 		}
 
-//		Erase the setOfLayer, before checking new road
-		setOflayers.erase(setOflayers.begin(),setOflayers.end());
+
 
 
 //		SOME AVERAGE ESTIMATES til now...
 		average_roads_fired+=n_roads_fired;
 		average_roads_before_reconstruction+=roads_before_reconstruction;
-
-
-
 
 	}
 
@@ -197,7 +196,7 @@ void readtree_roads::Loop(TString key)
 	cout << "... average of " << average_recognized_mutrack_perevent << " mu track recognized per event" << endl;
 
 	TCanvas * c[3];
-	for(Int_t k=0; k<4 ;++k){
+	for(Int_t k=0; k<3 ;++k){
 		c[k]=new TCanvas();
 	}
 
