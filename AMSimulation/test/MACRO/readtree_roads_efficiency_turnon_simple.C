@@ -24,17 +24,22 @@ void readtree_roads::Loop(TString key)
 {
 
 	if (fChain == 0) return;
-
 	Long64_t nentries = fChain->GetEntriesFast();
-	Int_t evt_not_reconstructed=0;
 
-	Int_t roads_before_reconstruction=0;
+//	**************************
+//	ROAD EFFICIENCY PARAMETERS
+//	**************************
+	const Int_t stub_threshold = 5;
+	const Int_t roads_cutoff = 1000000;
+
 	Float_t average_roads_before_reconstruction=0;
 	Float_t average_true_mu_perevent=0;
 	Float_t average_recognized_mutrack_perevent=0;
 	Float_t average_recognized_mutrack=0;
 	Float_t average_roads_fired=0;
 
+	Int_t evt_not_reconstructed=0;
+	Int_t roads_before_reconstruction=0;
 	Int_t genuine_mu=0;
 	Int_t all_stub=0;
 	Int_t n_roads_fired;
@@ -45,7 +50,6 @@ void readtree_roads::Loop(TString key)
 
 	Int_t * layer_phi_zeta;
 	Float_t trkParts_ChargeOverPt;
-
 	set<Int_t> setOflayers;		//remove overlap in same layer
 	pair < set<Int_t>::iterator , Bool_t>  insertYES;
 
@@ -78,39 +82,40 @@ void readtree_roads::Loop(TString key)
 
 	TH1I * road_read_before_reconstruction = new TH1I("road_read_before_reconstruction","road_read_before_reconstruction",1500,0,1500);
 
-//	*****
+//	***********
+//	LOOP EVENTS
+//	***********
 
 	Long64_t nbytes = 0, nb = 0;
-
-//	LOOP EVENTS
-
 	for (Long64_t jentry=0; jentry<nentries;jentry++) {
 		Long64_t ientry = LoadTree(jentry);
 		if (ientry < 0) break;
 		nb = fChain->GetEntry(jentry);   nbytes += nb;
 		// if (Cut(ientry) < 0) continue;
 
-		if (jentry % 500 == 0) cout << "@@@ event " << jentry << " ... Roads fired 'til now: " << average_roads_fired << endl;
+		if (jentry % 500 == 0) {
+			cout << "@@@ event " << jentry << " ... Roads fired 'til now: " << average_roads_fired << endl;
+		}
 //		if(jentry==20) break;
-		roads_before_reconstruction = 0;
 
+
+//		**********************************
 //		APPLY PHASE SPACE CUT  (trkPart 0)
+//		**********************************
 		trkParts_ChargeOverPt = float(trkParts_charge->at(0))/float(trkParts_pt->at(0));
 		int aux_TT = TrackParametersToTT().get_tt(trkParts_phi->at(0), trkParts_ChargeOverPt,trkParts_eta->at(0),trkParts_vz->at(0));
 		if (aux_TT != 25) continue;
-//		*****
-
 
 		average_true_mu_perevent++; //average number of true mu that pass the filters.
-
 		mu_trk_phi->Fill(trkParts_phi->at(0));
 		mu_trk_pT->Fill(trkParts_pt->at(0));
 		mu_trk_eta->Fill(trkParts_eta->at(0));
 
+//		***********************
+//		LOOP OVER ROADS FIRED
+//		***********************
 
-//		*****
-
-//		LOOP OVER PATTERN FIRED
+		roads_before_reconstruction = 0;
 		n_roads_fired=AMTTRoads_patternRef->size();
 		if(n_roads_fired<1) {
 			++n_evt_noroads;	//# of roads that has not fired
@@ -130,7 +135,6 @@ void readtree_roads::Loop(TString key)
 
 				//LOOP OVER STUBS LIST for that layer, in that pattern, for that event.
 				n_stubs=(*AMTTRoads_stubRefs)[patt_count][l].size();
-//				cout<<n_stubs <<endl;
 				for (Int_t stub_count = 0; stub_count< n_stubs; ++stub_count){
 
 					stub_index=(*AMTTRoads_stubRefs)[patt_count][l][stub_count];
@@ -138,7 +142,7 @@ void readtree_roads::Loop(TString key)
 
 //					if that trkpart is trk 0, go ahead
 					if( trk_index!=0) continue;
-//
+
 					layer_phi_zeta = phi_zeta(TTStubs_modId->at(stub_index)); //extract layer info //a[0] is the layer
 					insertYES = setOflayers.insert(layer_phi_zeta[0]);   //  do not overcount overlap;
 
@@ -151,7 +155,9 @@ void readtree_roads::Loop(TString key)
 //			keep trace of how many roads I need to throw out AM to get a reconstruction candidate.
 			roads_before_reconstruction++;
 
+//			*******************************
 //			ROAD EFFICIENCY 4 - 5 - 6 Stub?
+//			*******************************
 
 			if (genuine_mu>=5){
 				mu_trk_phi_4->Fill(trkParts_phi->at(0));
@@ -165,8 +171,10 @@ void readtree_roads::Loop(TString key)
 				break;
 			}
 
-			if(patt_count==n_roads_fired-1){
+//			**** ROADS CUTOFF ****
+			if(patt_count==n_roads_fired-1 || patt_count == roads_cutoff){
 				evt_not_reconstructed++;
+				break;
 			}
 
 		}
@@ -180,7 +188,9 @@ void readtree_roads::Loop(TString key)
 
 	}
 
-	//FINAL AVERAGE QUANTITIES
+//	************************
+//	FINAL AVERAGE QUANTITIES
+//	************************
 	average_roads_fired=average_roads_fired/average_true_mu_perevent;
 	average_roads_before_reconstruction=average_roads_before_reconstruction/nentries;
 	average_recognized_mutrack_perevent=average_recognized_mutrack_perevent/average_true_mu_perevent;
@@ -195,33 +205,36 @@ void readtree_roads::Loop(TString key)
 	cout << "... average of " << average_true_mu_perevent << " true mu track per event" <<endl;
 	cout << "... average of " << average_recognized_mutrack_perevent << " mu track recognized per event" << endl;
 
-	TCanvas * c[3];
-	for(Int_t k=0; k<3 ;++k){
+	TCanvas * c[4];
+	for(Int_t k=0; k<4 ;++k){
 		c[k]=new TCanvas();
 	}
 
 
-	//   Plot cross check turn on curves. Number of roads / event that has at least for mu-stub in them
+//	Plot cross check turn on curves. Number of roads / event that has at least for mu-stub in them
 	c[0]->Divide(1,2);
 	c[0]->cd(1);
 	mu_trk_phi->Draw();
 	mu_trk_phi_4->Divide(mu_trk_phi); //ratio as per title
 	c[0]->cd(2);
-	mu_trk_phi_4->Draw();
+	mu_trk_phi_4->Draw("histo");
 
 	c[1]->Divide(1,2);
 	c[1]->cd(1);
 	mu_trk_pT->Draw();
 	mu_trk_pT_4->Divide(mu_trk_pT);
 	c[1]->cd(2);
-	mu_trk_pT_4->Draw();
+	mu_trk_pT_4->Draw("histo");
 
 	c[2]->Divide(1,2);
 	c[2]->cd(1);
 	mu_trk_eta->Draw();
 	mu_trk_eta_4->Divide(mu_trk_eta);
 	c[2]->cd(2);
-	mu_trk_eta_4->Draw();
+	mu_trk_eta_4->Draw("histo");
+
+	c[3]->cd();
+	road_read_before_reconstruction->Draw("histo");
 
 }
 
@@ -239,19 +252,17 @@ void readtree_roads_efficiency_turnon_simple(){
 	TString fName;
 	TString name;
 
-
-
 	name="roads_mu_PU200_8K_sf1_nz1_pt3_0718"; //PU200 (8400 evt)
 //	name="roads_mu_PU0_TT25_50M_sf1_nz1_0719"; //only mu ((10000 evt)
 
 	fName = "../roads/"+name+".root"; //name of file root to read, with path
-	key = "_"+name;     //just a key for histos
+	key = "_"+name+"_"+"Rcutoff200";     //just a key for histos
 
 //	HERE I DEFINE OUTPUT .ROOT WITH THE HISTOGRAMS TO CHECK
 
 	bool isfOpen;
 	TFile* f = 0; isfOpen = false;
-	f = new TFile(name+"_efficiency_trk0_PU200.root","RECREATE");
+	f = new TFile(name+key+".root","RECREATE");
 	isfOpen = f->IsOpen();
 	if (!isfOpen) {
 		cout << "ERROR. Not able to load the confrontoBranches file. Exiting..." << endl;
