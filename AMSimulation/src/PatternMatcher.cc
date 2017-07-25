@@ -296,10 +296,10 @@ int PatternMatcher::makeRoads(TString src, TString out) {
         if (! roads.empty())
             ++nKept;
 
-        // Sort roads by pT
-        std::stable_sort(roads.begin(), roads.end(), [](const TTRoad& lhs, const TTRoad& rhs) {
-          return (std::abs(lhs.patternInvPt) < std::abs(rhs.patternInvPt));  // higher pT first
-        });
+//        // Sort roads by pT
+//        std::stable_sort(roads.begin(), roads.end(), [](const TTRoad& lhs, const TTRoad& rhs) {
+//          return (std::abs(lhs.patternInvPt) < std::abs(rhs.patternInvPt));  // higher pT first
+//        }); GV - 07/25 - No roads sorting by pT, keep original pattern sorting by popularity.
 
         assert(reader.vb_modId->size() == stubs_bitString.size());
         assert(reader.vb_modId->size() == stubs_superstripId.size());
