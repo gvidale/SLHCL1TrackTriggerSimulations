@@ -46,14 +46,15 @@ SuperstripArbiter::SuperstripArbiter()
   projective_max_nx_(0),
   fountain_sf_(0.),
   fountain_nz_(0),
-  fountain_max_nx_(0) {
+  fountain_max_nx_(0),
+  fountainopt_pt_(0) {
 
     // phiWidths for 6 barrel layer [0..5], 5 +z endcap disks [6..10], 5 -z endcap disks [11..15]
     // CUIDADO: dummy values are used for the endcap layers
     phiWidths_ = {
         0.00381*2, 0.00439, 0.00459, 0.00485, 0.00523, 0.00575,
-        9.99999, 9.99999, 9.99999, 9.99999, 9.99999,
-        9.99999, 9.99999, 9.99999, 9.99999, 9.99999
+        0.0048   , 0.0050 , 0.0058 , 0.0064 , 0.0070 , // RR guestimates based on the 1st barrel 2S and scattering studies on disks a-la fountain
+        0.0048   , 0.0050 , 0.0058 , 0.0064 , 0.0070
     };
     assert(phiWidths_.size() == 16);
 
@@ -185,12 +186,11 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
             fountain_sf_    = token2f;
             fountain_nz_    = token4f;
             useGlobalCoord_ = true;
-	    fountain_xfactor_ .push_back( token5f );
-	    fountain_xfactor_ .push_back( 1 );
-	    fountain_xfactor_ .push_back( 1 );
-	    fountain_xfactor_ .push_back( 1 );
-	    fountain_xfactor_ .push_back( 1 );
-	    fountain_xfactor_ .push_back( token6f );
+            fountain_xfactor_.clear();
+            fountain_xfactor_.resize(16,1);
+
+            fountain_xfactor_ .at(0)=token5f; //L5
+            fountain_xfactor_ .at(5)=token6f; //L10
 
             if (fountain_sf_ <= 0. || fountain_nz_ == 0)
                 throw std::invalid_argument("Incorrect fountain superstrip definition.");
