@@ -73,10 +73,15 @@ int main(int argc, char **argv) {
         ("tower,t"      , po::value<unsigned>(&option.tower)->default_value(25), "Specify the trigger tower")
 
         // Superstrip definition
-        ("superstrip,s" , po::value<std::string>(&option.superstrip)->default_value("sf1_nz8"), "Specify the superstrip definition (default: sf1_nz8)")
+        ("superstrip,s" , po::value<std::string>(&option.superstrip)->default_value("f_sf:1_nz:8"),
+        		"Specify the superstrip definition [type_factor1:XX_nz:YY(_nr_ZZ)] "
+        		"type: fw(fixed width), proj (projctive), f (fountain), fop (f. optimised), ff (fountain-flower); factor1: ss(for fw),nx(for proj),nz (other); nr is only for flower. (default: sf1_nz8)")
 
         // Track fitting algorithm
         ("algo,f"       , po::value<std::string>(&option.algo)->default_value("LTF"), "Select track fitter -- PCA4: PCA fitter 4 params; PCA5: PCA fitter 5 params; ATF4: ATF fitter 4 params; ATF5: ATF fitter 5 params; LTF: Linearized track fitter (default: LTF)")
+
+		//Hybrid, using flower ss or not. To use this, you must use -s ffX_nzX
+		("flower_charge", po::value<int>(&option.flower_charge)->default_value(0), "Select charge sign (+1,-1,0(for passing all)...(USE IN COMBINATION with fountain-flower SS: ffX_nzY)")
 
         // MC truth
         ("minPt"        , po::value<float>(&option.minPt)->default_value(     3.0), "Specify min pt")

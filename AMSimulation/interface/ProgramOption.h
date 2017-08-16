@@ -26,6 +26,7 @@ struct ProgramOption {
     unsigned    tower;
     std::string superstrip;
     std::string algo;
+    int	        flower_charge;
 
     float       minPt;
     float       maxPt;
