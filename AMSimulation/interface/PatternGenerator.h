@@ -27,7 +27,7 @@ class PatternGenerator {
         ttmap_->read(po_.datadir);
 
         arbiter_ = new SuperstripArbiter();
-        arbiter_->setDefinition(po_.superstrip, po_.tower, ttmap_);
+        arbiter_->setDefinition(po_.superstrip, po_.tower, ttmap_, po.flower_charge);
     }
 
     // Destructor
@@ -44,7 +44,7 @@ class PatternGenerator {
     // Member functions
 
     // Generate pattern bank
-    int makePatterns(TString src);
+    int makePatterns(TString src, int flower_charge);
 
     // Write pattern bank
     int writePatterns(TString out);

@@ -9,10 +9,61 @@ bool sortByFrequency(const std::pair<pattern_type, unsigned>& lhs, const std::pa
 }
 }
 
+const int iCompressedLayer[23] = {
+		-1,-1,-1,-1,-1,
+		0 , 1, 2, 3, 4, 5,
+		6 , 7, 8, 9,10,
+		-1,-1,
+		11,12,13,14,15
+};
 
+//RR Parameters for the stub selection to pass exactly 6 stubs to the pattern generator
+static const unsigned nLayers = 16;
+static const unsigned nValidConfs = 15; //RR chosen such that ~98% of the physical stub layer configurations are covered.
+
+int selectLayerConfiguration(bool (&bConfig)[nLayers], bool (&goodLayers)[nLayers]) {
+
+	// One extra region added wrt M. De Mattia proposal
+	const bool bValidConfigs[nLayers*nValidConfs] = {
+			1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+			1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0,
+			1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0,
+			1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+			1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+			1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+			1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0,
+			1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,
+			1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+			1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1,
+			1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+	};
+
+
+	int iGoodConf = -1;
+	for (unsigned int iConfs=0; iConfs<nValidConfs; ++iConfs) {
+		unsigned int nGoodLayers = 0;
+		for (unsigned int iL=0; iL<nLayers; ++iL) {
+			bool isGood = bConfig[iL]&&bValidConfigs[iL+nLayers*iConfs];
+			nGoodLayers += isGood;
+			goodLayers[iL] = isGood;
+		}
+		assert(nGoodLayers<=6);
+		if (nGoodLayers==6) {
+			iGoodConf = iConfs;
+			break;
+		}
+	}
+//	std::cout <<   Info() << "goodLayers[] " ;
+//	for (unsigned int iL=0; iL<nLayers; ++iL) std::cout << iL << "\t" << bConfig[iL] << "\t" << goodLayers[iL] << std::endl;
+	return iGoodConf;
+}
 // _____________________________________________________________________________
 // Make the patterns
-int PatternGenerator::makePatterns(TString src) {
+int PatternGenerator::makePatterns(TString src, int flower_charge) {
     if (verbose_)  std::cout << Info() << "Reading " << nEvents_ << " events and generating patterns." << std::endl;
 
     // _________________________________________________________________________
@@ -44,25 +95,27 @@ int PatternGenerator::makePatterns(TString src) {
         if (reader.loadTree(ievt) < 0)  break;
         reader.getEntry(ievt);
 
-        // Running estimate of coverage
+
+        // Running estimate of coverage (10000 evt steps, to reduce load. these number  are requiered if you want a display of estimate coverage)
+        if (ievt%10000 ==0){
+        bankSize = patternBank_map_.size();
+        coverage = 1.0 - float(bankSize - bankSizeOld) / float(nKept - nKeptOld);
+        bankSizeOld = bankSize;
+        nKeptOld = nKept;
+        }
+
         if (verbose_>1 && ievt%100000==0) {
-            bankSize = patternBank_map_.size();
-            coverage = 1.0 - float(bankSize - bankSizeOld) / float(nKept - nKeptOld);
-
             std::cout << Debug() << Form("... Processing event: %7lld, keeping: %7ld, # patterns: %7ld, coverage: %7.5f", ievt, nKept, bankSize, coverage) << std::endl;
-
-            bankSizeOld = bankSize;
-            nKeptOld = nKept;
         }
 
         const unsigned nstubs = reader.vb_modId->size();
         if (verbose_>2)  std::cout << Debug() << "... evt: " << ievt << " # stubs: " << nstubs << std::endl;
 
-//      GV -  Ignore event if #stubs > nLayer (AM can't handle more than that anyway')
-        if (nstubs > po_.nLayers) {
-        	if (verbose_>1) std::cout << "ERROR: #stubs > nLayers -> event ignored " << "... evt: " << ievt << " #stubs: " << nstubs << std::endl;
-        	continue;
-        }
+////      GV -  Ignore event if #stubs > nLayer (AM can't handle more than that anyway')
+//        if (nstubs > po_.nLayers) {
+//        	if (verbose_>1) std::cout << "ERROR: #stubs > nLayers -> event ignored " << "... evt: " << ievt << " #stubs: " << nstubs << std::endl;
+//        	continue;
+//        }
         // Get sim info
         float simPt           = reader.vp_pt->front();
         float simEta          = reader.vp_eta->front();
@@ -75,35 +128,70 @@ int PatternGenerator::makePatterns(TString src) {
         float simCotTheta     = std::sinh(simEta);
         float simChargeOverPt = float(simCharge)/simPt;
 
+        // FOR HYBRID, FLOWER ONLY: select charge. If the option is different from 1 o -1, pass all. Default is 0 (all)
+        if(flower_charge*simCharge == 1){
+        	++nRead;
+        	continue;
+        }
+
         // Apply track pt requirement
         if (simPt < po_.minPt || po_.maxPt < simPt) {
             ++nRead;
             continue;
         }
 
-        // Apply trigger tower acceptance
-        unsigned ngoodstubs = 0;
+        // Apply trigger tower acceptance and check for a valid layer configuration
+//        std::vector<unsigned> vLayers;
+//        unsigned ngoodstubs = 0;
+//        for (unsigned istub=0; istub<nstubs; ++istub) {
+//        	unsigned moduleId = reader.vb_modId   ->at(istub);
+//        	if (ttrmap.find(moduleId) != ttrmap.end()) {
+//        		++ngoodstubs;
+//        	}
+//        }
+        bool bConfig[nLayers] = {false};
         for (unsigned istub=0; istub<nstubs; ++istub) {
             unsigned moduleId = reader.vb_modId   ->at(istub);
             if (ttrmap.find(moduleId) != ttrmap.end()) {
-                ++ngoodstubs;
+                unsigned iLayer = (unsigned)moduleId/10000; //HACK. FIXME there must be a standard function that returns the layerID
+                assert(iCompressedLayer[iLayer]>=0);
+              	bConfig[iCompressedLayer[iLayer]] = true;
+//              	vLayers.push_back(iLayer);
             }
         }
-        if (ngoodstubs != po_.nLayers) {
+        bool goodLayers[nLayers] = {false};
+        int iGoodConf = selectLayerConfiguration(bConfig,goodLayers);
+//        for (unsigned int iL=0; iL<nLayers; ++iL) bConfig[iL] = false;
+        if (verbose_>2)  {
+        	std::cout << Debug() << "... iGoodConf: " << iGoodConf << std::endl;
+        	for (unsigned int iL=0; iL<nLayers; ++iL) std::cout << goodLayers[iL] << "\t";
+        	std::cout << std::endl;
+        }
+
+//        if (ngoodstubs != po_.nLayers) {
+        if (iGoodConf<0) {
             ++nRead;
             continue;
         }
-        assert(nstubs == po_.nLayers);
-
-
+//        assert(nstubs == po_.nLayers);
+        if (verbose_>2)  {
+        	std::cout << "ievt: " << ievt << "\t\t" << iGoodConf << std::endl;
+        	for (unsigned int iL=0; iL<nLayers; ++iL) {
+        		std::cout << goodLayers[iL] << "\t";
+        	}
+        	std::cout << std::endl;
+        }
         // _____________________________________________________________________
         // Start generating patterns
 
         patt.fill(0);
 
         // Loop over reconstructed stubs
+        unsigned igoodstub = 0;
         for (unsigned istub=0; istub<nstubs; ++istub) {
             unsigned moduleId = reader.vb_modId   ->at(istub);
+            unsigned iLayer = (unsigned)moduleId/10000;//HACK. FIXME there must be a standard function that returns the layerID
+            if (!goodLayers[iCompressedLayer[iLayer]]) continue;
             float    strip    = reader.vb_coordx  ->at(istub);  // in full-strip unit
             float    segment  = reader.vb_coordy  ->at(istub);  // in full-strip unit
 
@@ -120,13 +208,17 @@ int PatternGenerator::makePatterns(TString src) {
             } else {                              // global coordinates
                 ssId = arbiter_ -> superstripGlobal(moduleId, stub_r, stub_phi, stub_z, stub_ds);
             }
-            patt.at(istub) = ssId;
+//            patt.at(istub) = ssId;
+            patt.at(igoodstub++) = ssId;
 
             if (verbose_>2) {
                 std::cout << Debug() << "... ... stub: " << istub << " moduleId: " << moduleId << " strip: " << strip << " segment: " << segment << " r: " << stub_r << " phi: " << stub_phi << " z: " << stub_z << " ds: " << stub_ds << std::endl;
-                std::cout << Debug() << "... ... stub: " << istub << " ssId: " << ssId << std::endl;
+                std::cout << Debug() << "... ... stub: " << istub << "...igoodstub: " << igoodstub << " ssId: " << ssId << std::endl;
             }
         }
+//        std::cout << std::endl;
+//        std::cout << "igoodstub: " << igoodstub << std::endl;
+        assert(igoodstub==6);
 
         // Insert pattern into the bank
         ++patternBank_map_[patt];
@@ -288,7 +380,7 @@ int PatternGenerator::run() {
     int exitcode = 0;
     Timing(1);
 
-    exitcode = makePatterns(po_.input);
+    exitcode = makePatterns(po_.input,po_.flower_charge);
     if (exitcode)  return exitcode;
     Timing();
 
