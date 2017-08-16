@@ -134,6 +134,9 @@ private:
     std::map<unsigned, bool> ttrmap_;
 
 public:
+
+    	int flower_charge_ = 1;  //This is the parameter in case you use flower ss scheme
+
     void setUp() {
         ttmap_   = new TriggerTowerMap();
         arbiter_ = new SuperstripArbiter();
@@ -157,28 +160,28 @@ public:
 
     void testArbiterDefinition() {
         TString ss = "ss0_nz32";
-        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_), std::invalid_argument);
+        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_), std::invalid_argument);
 
         ss = "ss1_nz0";
-        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_), std::invalid_argument);
+        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_), std::invalid_argument);
 
         ss = "ss1025_nz32";
-        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_), std::invalid_argument);
+        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_), std::invalid_argument);
 
         ss = "ss1_nz33";
-        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_), std::invalid_argument);
+        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_), std::invalid_argument);
 
         ss = "ss3_nz2";
-        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_), std::invalid_argument);
+        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_), std::invalid_argument);
 
         ss = "ss256_nz3";
-        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_), std::invalid_argument);
+        CPPUNIT_ASSERT_THROW(arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_), std::invalid_argument);
     }
 
     void testArbiterFixedwidth() {
         if (true) {
             TString ss = "ss256_nz2";
-            arbiter_ -> setDefinition(ss, tt_, ttmap_);
+            arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_);
             arbiter_ -> print();
 
             unsigned lay = 5;
@@ -211,7 +214,7 @@ public:
 
         if (true) {
             TString ss = "ss1_nz32";
-            arbiter_ -> setDefinition(ss, tt_, ttmap_);
+            arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_);
             arbiter_ -> print();
 
             unsigned lay = 5;
@@ -244,7 +247,7 @@ public:
 
         if (false) {
             TString ss = "ss1024_nz1";
-            arbiter_ -> setDefinition(ss, tt_, ttmap_);
+            arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_);
             arbiter_ -> print();
 
             unsigned lay = 5;
@@ -282,7 +285,7 @@ public:
 
         if (true) {
             TString ss = "nx200_nz1";
-            arbiter_ -> setDefinition(ss, tt_, ttmap_);
+            arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_);
             arbiter_ -> print();
 
             for (unsigned i=0; i<6; ++i) {
@@ -313,7 +316,7 @@ public:
 
         if (true) {
             TString ss = "sf1_nz1";
-            arbiter_ -> setDefinition(ss, tt_, ttmap_);
+            arbiter_ -> setDefinition(ss, tt_, ttmap_,flower_charge_);
             arbiter_ -> print();
 
             for (unsigned i=0; i<6; ++i) {

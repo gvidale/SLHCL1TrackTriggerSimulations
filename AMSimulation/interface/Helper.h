@@ -66,7 +66,7 @@ inline unsigned encodeModuleId(unsigned lay, unsigned lad, unsigned mod) {
 // Compress layer id
 inline unsigned compressLayer(const unsigned& lay) {
     if (lay <  5) return 255;
-    if (lay < 16) return lay-5;  // 5-10 = barrel, 11-15 = endcap +
+    if (lay < 16) return lay-5;  // Return index from 0 (layer 5) to 15 (last disk) // 5-10 = barrel, 11-15 = endcap +
     if (lay < 18) return 255;
     if (lay < 23) return lay-7;  // 18-22 = endcap -
     if (lay < 25) return 255;

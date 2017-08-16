@@ -33,7 +33,7 @@ class PatternAnalyzer {
         ttmap_->read(po_.datadir);
 
         arbiter_ = new SuperstripArbiter();
-        arbiter_->setDefinition(po_.superstrip, po_.tower, ttmap_);
+        arbiter_->setDefinition(po_.superstrip, po_.tower, ttmap_, po_.flower_charge);
     }
 
     // Destructor

@@ -10,7 +10,7 @@
 
 namespace slhcl1tt {
 
-  enum SuperstripType {UNKNOWN, FIXEDWIDTH, PROJECTIVE, FOUNTAIN, FOUNTAINOPT};
+  enum SuperstripType {UNKNOWN, FIXEDWIDTH, PROJECTIVE, FOUNTAIN, FOUNTAINOPT,FOUNTAIN_FLOWER};
 
 class SuperstripArbiter {
   public:
@@ -25,7 +25,7 @@ class SuperstripArbiter {
     unsigned superstripGlobal(unsigned moduleId, float r, float phi, float z, float ds) const;
 
     // Functions
-    void setDefinition(TString definition, unsigned tt, const TriggerTowerMap* ttmap);
+    void setDefinition(TString definition, unsigned tt, const TriggerTowerMap* ttmap, int flower_charge);
 
     unsigned nsuperstripsPerLayer() const { return nsuperstripsPerLayer_; }
 
@@ -42,6 +42,7 @@ class SuperstripArbiter {
     unsigned superstripFixedwidth(unsigned moduleId, float strip, float segment) const;
     unsigned superstripProjective(unsigned moduleId, float r, float phi, float z, float ds) const;
     unsigned superstripFountain(unsigned moduleId, float r, float phi, float z, float ds) const;
+    unsigned superstripFountainFlower(unsigned moduleId, float r, float phi, float z, float ds) const;
 
     // Member data
     SuperstripType     sstype_;
@@ -64,6 +65,12 @@ class SuperstripArbiter {
     unsigned           fountain_max_nx_;
     std::vector<float> fountain_phiBins_;
     std::vector<float> fountain_zBins_;
+    std::vector<float> fountainflower_zrBins_;
+    int   			   flower_arbitrer_charge;
+    float			   flower_reference_pt_; //gev/c
+    std::vector<float> flower_firstSS_phizero_; //radius at tower_phi_min that lays on flower curve (first ssID)
+    std::vector<float> flower_lastSS_phizero_;
+    float 			   flower_nr_;
     float              fountainopt_pt_;
 
     // Trigger tower geometry
