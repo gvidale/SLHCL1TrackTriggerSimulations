@@ -13,7 +13,8 @@ namespace slhcl1tt {
   class TrackParametersToTT {
   public:
     int get_tt(double phi, double invPt, double eta, double z0, bool apply_pt_cut=true) {
-      constexpr double max_eta = 2.2;
+      const float range_eta[7] = {-2.4,-1.46,-0.8,0,0.8,1.46,2.4}; //GV custom size tower. (to maximize gain using flower)
+      constexpr double max_eta = 2.4; //GV 08/21 FIX to include foreward disks (Range L1)
       constexpr double max_z0 = 15.; // [cm]
       constexpr double max_invPt = 1./3;  // [1/GeV]
       double etaStar = get_etaStar_from_eta(eta, z0, invPt);
@@ -22,7 +23,15 @@ namespace slhcl1tt {
         return -1;
       }
 
-      int tt_eta = (etaStar + max_eta) / (max_eta*2./6);
+//      int tt_eta = (etaStar + max_eta) / (max_eta*2./6); //GV 0822: using slightly bigger foreward tower in eta, reducing size of hybrid
+      int tt_eta = -1;
+      for (int index = 0; index < 7; ++index){
+    	  if(etaStar <= range_eta[index] ) {
+    		  tt_eta = index - 1;
+    		  break;
+    	  }
+      }
+      assert(tt_eta != -1);
       int tt_phi = (phiStar + M_PI) / (M_PI*2./8);
       tt_phi = (tt_phi + 4) % 8;
       int tt = tt_eta * 8 + tt_phi;

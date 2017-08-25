@@ -32,7 +32,7 @@ class PatternMatcher {
         ttmap_->read(po_.datadir);
 
         arbiter_ = new SuperstripArbiter();
-        arbiter_->setDefinition(po_.superstrip, po_.tower, ttmap_,po_.flower_charge);
+        arbiter_->setDefinition(po_.superstrip, po_.tower, ttmap_,po_.flower_charge, po.flower_pt);
 
         momap_ = 0;
         if (po_.removeOverlap) {

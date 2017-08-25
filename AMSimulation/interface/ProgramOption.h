@@ -27,6 +27,7 @@ struct ProgramOption {
     std::string superstrip;
     std::string algo;
     int	        flower_charge;
+    float       flower_pt;
 
     float       minPt;
     float       maxPt;

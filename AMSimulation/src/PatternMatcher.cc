@@ -61,7 +61,7 @@ int PatternMatcher::loadPatterns(TString bank) {
     associativeMemory_.freeze();
     assert(associativeMemory_.size() == npatterns);
 
-    if (verbose_)  std::cout << Info() << "Successfully loaded " << npatterns << " patterns." << std::endl;
+    if (verbose_ >3)  std::cout << Info() << "Successfully loaded " << npatterns << " patterns." << std::endl;
 
     return 0;
 }
@@ -184,7 +184,6 @@ int PatternMatcher::makeRoads(TString src, TString out) {
         // Null trkPart information for those that are not primary
         reader.nullParticles(trkPartsNotPrimary);
 
-
         // _____________________________________________________________________
         // Start pattern recognition
         hitBuffer_.reset();
@@ -195,6 +194,7 @@ int PatternMatcher::makeRoads(TString src, TString out) {
         // Loop over reconstructed stubs
         for (unsigned istub=0; istub<nstubs; ++istub) {
             bool isNotInTower = stubsNotInTower.at(istub);
+
             if (isNotInTower) {
                 stubs_bitString.push_back("");
                 stubs_superstripId.push_back(0);
@@ -227,9 +227,10 @@ int PatternMatcher::makeRoads(TString src, TString out) {
 
             unsigned lay16    = compressLayer(decodeLayer(moduleId));
 
+
             // Push into hit buffer
             hitBuffer_.insert(lay16, ssId, istub);
-
+//            std::cout << "up to line 233 in patternmatcher ok. just after hitbuffer_.insert" << std::endl;
             if (verbose_>2) {
                 std::cout << Debug() << "... ... stub: " << istub << " moduleId: " << moduleId << " strip: " << strip << " segment: " << segment << " r: " << stub_r << " phi: " << stub_phi << " z: " << stub_z << " ds: " << stub_ds << " clusRef0: " << reader.vb_clusRef0->at(istub) << " clusRef1: " << reader.vb_clusRef1->at(istub) << std::endl;
                 std::cout << Debug() << "... ... stub: " << istub << " ssId: " << ssId << std::endl;

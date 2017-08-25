@@ -55,6 +55,9 @@ SuperstripArbiter::SuperstripArbiter()
   flower_firstSS_phizero_ (0),
   flower_lastSS_phizero_ (0), //only for hybrid (size 10, starts from layer 11)
   flower_nr_(0.),
+  flower_sf_(0.),
+  flower_max_nx_(0.),
+  flower_opt_(false),
   fountainopt_pt_(0) {
 
     // phiWidths for 6 barrel layer [0..5], 5 +z endcap disks [6..10], 5 -z endcap disks [11..15]
@@ -64,6 +67,20 @@ SuperstripArbiter::SuperstripArbiter()
         0.0048   , 0.0050 , 0.0058 , 0.0064 , 0.0070 , // RR guestimates based on the 1st barrel 2S and scattering studies on disks a-la fountain
         0.0048   , 0.0050 , 0.0058 , 0.0064 , 0.0070
     };
+    assert(phiWidths_.size() == 16);
+
+    phiWidths_floweropt_ = { //GV optimized for 2s ratio
+    		0.00381*2, 0.00439, 0.00459, 0.00485, 0.00523, 0.00575,
+			0.0051,	0.0062,	0.0077,	0.0088,	0.098, // GV estimates on scattering studies on disks (2s), and ratio ps 2s for TOWER 41
+			0.0051,	0.0062,	0.0077,	0.0088,	0.098
+    };
+    //  lay 6    7	8	9	10
+//  ps	0.0051	0.0056	0.006	0.0066	0.0076
+//  ss	0.0052	0.0083	0.0095	0.01	0.0108
+//   2s 	0	0.25	0.5	 0.67	0.7
+//   opt(ps-2s-%2s)  0.0051,	0.0062,	0.0077,	0.0088,	0.098
+
+
     assert(phiWidths_.size() == 16);
 
     phiWidths_opt_lowpt_ = {
@@ -103,7 +120,7 @@ SuperstripArbiter::SuperstripArbiter()
 }
 
 // _____________________________________________________________________________
-void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const TriggerTowerMap* ttmap, int flower_charge) {
+void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const TriggerTowerMap* ttmap, int flower_charge,float flower_pt) {
 
     // Parse the definition string -->  ff_sfb:XX_nz:YY_nr:ZZ
 	typedef boost::tokenizer<boost::char_separator<char> > Tokenizer; //Class
@@ -119,7 +136,7 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 	
 
 	int token_size = token.size();
-//	std::cout << "#token " << token_size << std::endl;
+//	std::cout << "#token pinolinolup " << token_size << std::endl;
 //	OLD
 //    if (definition.Contains("_")) {
 //        unsigned pos = definition.Index("_");
@@ -137,32 +154,42 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 	int posL10 = definition.Index("L10x");
 	if (posL10 != -1) token6 = definition(posL10+4,1);
 	
+	//Need 9 tokens for fountain and flower, barrel + disk independent
         if (token[0] == "fw") { //factor1 ss
             sstype_ = SuperstripType::FIXEDWIDTH;
         } else if (token[0] == "proj") {//factor1 nx
             sstype_ = SuperstripType::PROJECTIVE;
         } else if (token[0] == "f") {//factor1 sf
             sstype_ = SuperstripType::FOUNTAIN;
+        } else if (token[0] == "fopgv") {//factor1 sf
+        	sstype_ = SuperstripType::FOUNTAIN;
+        	flower_opt_ = true;
         } else if (token[0] == "fop") {//sf
             sstype_ = SuperstripType::FOUNTAINOPT;
         } else if (token[0] == "ff") {//sf
         	sstype_ = SuperstripType::FOUNTAIN_FLOWER;
+        } else if (token[0] == "ffopgv") {//sf
+          	sstype_ = SuperstripType::FOUNTAIN_FLOWER;
+          	flower_opt_ = true;
         } else {
             throw std::invalid_argument("Incorrect superstrip definition.");
         }
 
-        if (token_size>5 && token[0]!="ff"){
-        	throw std::invalid_argument("Incorrect superstrip definition. Too many arguments if not flower");
+        //Check validity of arguments
+        if (token_size!= 5 &&( token[0]=="fw"||token[0]=="proj")){
+        	throw std::invalid_argument("Incorrect superstrip definition. Wrong arguments for proj or fw.");
         }
-        if (token_size!= 7 && token[0]=="ff"){
-        	throw std::invalid_argument("Incorrect superstrip definition. Wrong arguments for flower");
+        if (token_size!= 9 &&( token[0]!="fw"&&token[0]!="proj")){
+        	throw std::invalid_argument("Incorrect superstrip definition. Wrong arguments for fountain or flower.");
         }
 
-        if(token[1]=="sf" && (token[0]=="f"||token[0]=="ff"||token[0]=="fop") ){
+        if(token[1]=="sf" && (token[0]=="f"||token[0]=="ff"||token[0]=="fop" ||token[0]=="fopgv"||token[0]=="ffopgv") ){
         	// Do nothing
         } else {
         	throw std::invalid_argument("Incorrect superstrip definition iwith scale factor ff (did you mean ss or nx?).");
         }
+
+        if (token[0]=="fopgv" || token[0]=="ffopgv") std::cout << "using optimized 2s ratio disks phi widths" << std::endl;
 
         token[2].ReplaceAll("p", ".");
         if (token[2].IsFloat()) {
@@ -186,8 +213,10 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
         float token4f = token[4].Atof();
 
         float tokenFFnr6f=0;
-        //Specific for "ff" flower
-        if(token[0]=="ff"){
+        float tokenFFsf7f=0;
+
+        //Specific for fountain and flower, 9 tokens.
+        if(token_size == 9){
         	if (token[5] == "nr") {
         		// Do nothing
         	} else {
@@ -200,6 +229,20 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
         		throw std::invalid_argument("Incorrect superstrip definition.");
         	}
         	tokenFFnr6f = token[6].Atof();
+
+        	if (token[7] == "sf") {
+        		// Do nothing
+        	} else {
+        		throw std::invalid_argument("Incorrect superstrip definition.");
+        	}
+
+        	if (token[8].IsFloat()) { //scale factor fountain
+        		// Do nothing
+        	} else {
+        		throw std::invalid_argument("Incorrect superstrip definition.");
+        	}
+        	tokenFFsf7f = token[8].Atof();
+
         }
 
 
@@ -243,6 +286,8 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 	case SuperstripType::FOUNTAIN:
 		fountain_sf_    = token2f;
 		fountain_nz_    = token4f;
+		flower_nr_	    = tokenFFnr6f;
+		flower_sf_      = tokenFFsf7f;
 		useGlobalCoord_ = true;
 		fountain_xfactor_.clear();
 		fountain_xfactor_.resize(16,1);
@@ -250,14 +295,16 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 		fountain_xfactor_ .at(0)=token5f; //L5
 		fountain_xfactor_ .at(5)=token6f; //L10
 
-		if (fountain_sf_ <= 0. || fountain_nz_ == 0)
-			throw std::invalid_argument("Incorrect fountain superstrip definition.");
+		if (fountain_sf_ <= 0. || fountain_nz_ == 0 || flower_sf_ <=0. || flower_nr_ == 0)
+			throw std::invalid_argument("Incorrect fountain superstrip definition.pippolo");
 		break;
 
 	case SuperstripType::FOUNTAIN_FLOWER:
 		fountain_sf_    = token2f;
 		fountain_nz_    = token4f;
 		flower_nr_	    = tokenFFnr6f;
+		flower_sf_      = tokenFFsf7f;
+		std::cout << " f-flower sf_nz_nr_sf: " << fountain_sf_ << fountain_nz_ << flower_nr_ << flower_sf_ <<std::endl;
 		useGlobalCoord_ = true;
 		fountain_xfactor_.clear();
 		fountain_xfactor_.resize(16,1);
@@ -265,10 +312,10 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 		fountain_xfactor_ .at(0)=token5f; //L5
 		fountain_xfactor_ .at(5)=token6f; //L10
 
-		if (fountain_sf_ <= 0. || fountain_nz_ == 0)
-			throw std::invalid_argument("Incorrect fountain superstrip definition.");
+		if (fountain_sf_ <= 0. || fountain_nz_ == 0 || flower_sf_ <=0. || flower_nr_ == 0)
+			throw std::invalid_argument("Incorrect flower superstrip definition.");
 		flower_arbitrer_charge = (flower_charge>=0)? 1 : -1; //if the option charge is positive or zero, use positive configuration (flower anticlockwise), otherwise negative
-//		std::cout << " setting sf,nz,nr is good" <<std::endl;
+		flower_reference_pt_ = flower_pt;
 		break;
 
 	case SuperstripType::FOUNTAINOPT:
@@ -376,12 +423,32 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 		fountain_zBins_.resize(16);
 
 		for (unsigned i=0; i<phiMins_.size(); ++i) {
-			fountain_phiBins_.at(i) = phiWidths_.at(i) * fountain_xfactor_[i] * fountain_sf_;
-			fountain_zBins_  .at(i) = (zMaxs_.at(i) - zMins_.at(i)) / fountain_nz_;
-			unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
-			if (fountain_max_nx_ < nx)
-				fountain_max_nx_ = nx;
+			if(i<6) {
+				fountain_phiBins_.at(i) = phiWidths_.at(i) * fountain_xfactor_[i] * fountain_sf_;
+				unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
+				if (fountain_max_nx_ < nx)
+					fountain_max_nx_ = nx;
+			}
+			else	{
+
+				if(flower_opt_==false) fountain_phiBins_.at(i) = phiWidths_.at(i) * fountain_xfactor_[i] * flower_sf_;
+				else			       fountain_phiBins_.at(i) = phiWidths_floweropt_.at(i) * fountain_xfactor_[i] * flower_sf_;
+				unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
+				if (flower_max_nx_ < nx)
+					flower_max_nx_ = nx;
+			}
+
+			if(i<6) fountain_zBins_.at(i) = (zMaxs_.at(i) - zMins_.at(i)) / fountain_nz_;
+			else    fountain_zBins_.at(i) = (zMaxs_.at(i) - zMins_.at(i)) / flower_nr_;
+
 		}
+//			if(flower_opt_ == false) fountain_phiBins_.at(i) = phiWidths_.at(i) * fountain_xfactor_[i] * fountain_sf_;
+//			if(flower_opt_ == true)  fountain_phiBins_.at(i) = phiWidths_floweropt_.at(i) * fountain_xfactor_[i] * fountain_sf_;
+//			fountain_zBins_  .at(i) = (zMaxs_.at(i) - zMins_.at(i)) / fountain_nz_;
+//			unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
+//			if (fountain_max_nx_ < nx)
+//				fountain_max_nx_ = nx;
+//		}
 		//nsuperstripsPerLayer_ = fountain_max_nx_ * fountain_nz_;
 		nsuperstripsPerLayer_ = 1<<12;  // 12-bit superstrip
 		print();
@@ -394,19 +461,32 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 		fountain_phiBins_.resize(16);
 		fountainflower_zrBins_.resize(16);
 
-		//sf is the same for barrel (fountain) and disks (flower). all layers are set the same way
+		//fountain_sf is for barrel layers. flower sf is for disks. Fountain_phibins contains 16 layers.
 		//nz is only for barrel (first 6 places in vector), next ten are for disks nr.
 		for (unsigned i=0; i<phiMins_.size(); ++i) { //phiMins is always size 16. resized when getting boundaries.
-			fountain_phiBins_.at(i) = phiWidths_.at(i) * fountain_xfactor_[i] * fountain_sf_;
+			if(i<6) {
+				fountain_phiBins_.at(i) = phiWidths_.at(i) * fountain_xfactor_[i] * fountain_sf_;
+				unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
+				if (fountain_max_nx_ < nx)
+					fountain_max_nx_ = nx;
+			}
+			else	{
+
+				if(flower_opt_==false) fountain_phiBins_.at(i) = phiWidths_.at(i) * fountain_xfactor_[i] * flower_sf_;
+				else			       fountain_phiBins_.at(i) = phiWidths_floweropt_.at(i) * fountain_xfactor_[i] * flower_sf_;
+				unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
+				if (flower_max_nx_ < nx)
+					flower_max_nx_ = nx;
+			}
 //			std::cout << "phi bins " << "layer " << i << " " <<fountain_phiBins_.at(i) << std::endl;
 			if(i<6) fountainflower_zrBins_.at(i) = (zMaxs_.at(i) - zMins_.at(i)) / fountain_nz_;
 			else    fountainflower_zrBins_.at(i) = (zMaxs_.at(i) - zMins_.at(i)) / flower_nr_;
 
-			unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
-			if (fountain_max_nx_ < nx)
-				fountain_max_nx_ = nx;
+//			unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
+//			if (fountain_max_nx_ < nx)
+//				fountain_max_nx_ = nx;
 		}
-//		std::cout << "setting maxnx ok " << std::endl;
+
 		//    	Set reference curve SSindex on hybrid (5   -> 10    ;   11  ->20)
 		//    	Fill disks (other = 0)  [at(0),at(5)] ; [at(6),at(15)]
 		flower_firstSS_phizero_.clear();
@@ -414,20 +494,21 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 		flower_lastSS_phizero_.clear();
 		flower_lastSS_phizero_.resize(16);
 
-		if(flower_arbitrer_charge >=0) {//ATTENTION! STARTS FROM 6th place!! other 0.
+		std::cout << "arbitrer charge: "<< flower_arbitrer_charge << std::endl;
+		if(flower_arbitrer_charge >= 0) {//ATTENTION! STARTS FROM 6th place!! other 0.
 			for (unsigned i=6; i<phiMins_.size(); ++i){ //from layer 11 (->at(6) to layer 20 -> at (15)
 				//phi0 of the reference curve that passes at phi_max @ r_max tower (FIRST SS) (anticlockwise)
-				flower_firstSS_phizero_.at(i)= -asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * zMaxs_.at(i)/100) + phiMins_.at(i);  //FIRST: z:max,phimins
-//				std::cout <<"layer " << i <<" zMax " <<zMaxs_.at(i) << " zMin " << zMins_.at(i) << " phiMax " << phiMaxs_.at(i) << " phiMin " << phiMins_.at(i) << " flower_first_phi0 " << flower_firstSS_phizero_.at(i)<<std::endl;
-				flower_lastSS_phizero_.at(i)=-asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * zMins_.at(i)/100) + phiMaxs_.at(i);    //LAST   zmin, phimax
-//				std::cout << "flower_last_phi0 " << "layer " << i << " " <<flower_lastSS_phizero_.at(i)<<std::endl;
+				flower_firstSS_phizero_.at(i)= asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * zMins_.at(i)/100) + phiMins_.at(i);  //FIRST: z:max,phimins
+				flower_lastSS_phizero_.at(i)=  asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * zMaxs_.at(i)/100) + phiMaxs_.at(i);    //LAST   zmin, phimax
+				std::cout <<"layer " << i <<" zMax " <<zMaxs_.at(i) << " zMin " << zMins_.at(i) << " phiMax " << phiMaxs_.at(i) << " phiMin " << phiMins_.at(i) << " flower_first_phi0 " << flower_firstSS_phizero_.at(i)<< "flower_last_phi0 "<<flower_lastSS_phizero_.at(i)<<std::endl;
+
 			}
 		}
-		if(flower_arbitrer_charge <0) {
+		else{
 			for (unsigned i=6; i<phiMins_.size(); ++i){
 				//phi0 of the reference curve that passes at phi_max @ r_min tower (FIRST SS) (clockwise)
-				flower_firstSS_phizero_.at(i)= -asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * zMins_.at(i)/100) + phiMins_.at(i);  //FIRST: zmin,phimins
-				flower_lastSS_phizero_.at(i)=-asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * zMaxs_.at(i)/100) + phiMaxs_.at(i);    //LAST:   zmax, phi max
+				flower_firstSS_phizero_.at(i)= asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * zMaxs_.at(i)/100) + phiMins_.at(i);  //FIRST: zmin,phimins
+				flower_lastSS_phizero_.at(i)=  asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * zMins_.at(i)/100) + phiMaxs_.at(i);    //LAST:   zmax, phi max
 			}
 		}
 //		std::cout << "setting first last ss ok" << std::endl;
@@ -613,7 +694,8 @@ unsigned SuperstripArbiter::superstripFountainFlower(unsigned moduleId, float r,
 //    if FLOWER= false, just export the barrel SS definition, with hardcoded phi widths.
 //    ssId are from 0 to n_phi, n_z for barrel; from (n_phi+1) elsewhere
 
-    int n_phi = fountain_max_nx_;
+    int n_phi = fountain_max_nx_  ; //+2 for underflow and overflow tower
+    int n_phi_disk = flower_max_nx_;
     int n_z   = fountain_nz_;
     int n_r_disk = flower_nr_;
     int i_phi, i_z;
@@ -623,21 +705,20 @@ unsigned SuperstripArbiter::superstripFountainFlower(unsigned moduleId, float r,
     	i_phi = std::floor((phi - phiMins_.at(lay16)) / fountain_phiBins_.at(lay16));
     	i_z   = std::floor((z - zMins_.at(lay16)) / fountainflower_zrBins_.at(lay16));
 //    	std::cout << " coder done, zMins" << zMins_.at(lay16)<<std::endl;
-    	i_phi     = (i_phi < 0) ? 0 : (i_phi >= n_phi) ? (n_phi - 1) : i_phi;  // proper range
+    	i_phi     = (i_phi < 0) ? 0 : (i_phi >= n_phi) ? (n_phi - 1) : i_phi;  // proper range n real ss: [0 (underflow), 1,..., n, n+1 (over)]
     	i_z       = (i_z   < 0) ? 0 : (i_z   >= n_z  ) ? (n_z   - 1) : i_z;    // proper range
     }
 
     else { //disks (11-20) aka (7,8,...,15)
-    	float phi_reference = asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * r/100) + flower_firstSS_phizero_.at(lay16);
-//    	i_phi = std::floor((phi - phi_reference + hybrid_deltaphi_fromboundary_reference_curve_.at(lay16)) / fountain_phiBins_.at(lay16));
+    	float phi_reference = -asin(0.3*3.8*flower_arbitrer_charge/flower_reference_pt_ / 2 * r/100) + flower_firstSS_phizero_.at(lay16);
     	i_phi = std::floor((phi - phi_reference ) / fountain_phiBins_.at(lay16));
     	i_z   = std::floor((z - zMins_.at(lay16)) / fountainflower_zrBins_.at(lay16)) ;
 //    	if(i_phi < 0) std::cout << "iphi<0 -> phi" << phi << "  r " << r << " .. phi_reference " << phi_reference << std::endl;
 //    	if(i_phi>n_phi)std::cout << "iphi>n_phi-> nphi: " << n_phi << " .. phi" << phi << "  r " << r << " .. phi_reference " << phi_reference << std::endl;
 
 
-    	i_phi     = (i_phi < 0) ? 0 : (i_phi >= n_phi) ? (n_phi - 1) : i_phi;  // proper range
-    	i_z       = (i_z   < 0) ? 0 : (i_z   >= n_r_disk  ) ? (n_r_disk   - 1) : i_z;    // proper range
+    	i_phi     = (i_phi < 0) ? 0 : (i_phi >= n_phi_disk) ? (n_phi_disk -1) : i_phi;  // proper range
+    	i_z       = (i_z   < 0) ? 0 : (i_z   >= n_r_disk  ) ? (n_r_disk  - 1) : i_z;    // proper range
 
     }
 
@@ -666,13 +747,16 @@ void SuperstripArbiter::print() {
         break;
 
     case SuperstripType::FOUNTAIN:
-        std::cout << "Using fountain superstrip with sf: " << fountain_sf_ << ", nz: " << fountain_nz_
+        std::cout << "Using fountain superstrip [barrel] with sf: " << fountain_sf_ << ", nz: " << fountain_nz_
+				  << "Using fountain superstrip  [disk]  with sf: " << flower_sf_ << ", nr: " << flower_nr_
                   << ", phi bins (barrel): " << fountain_phiBins_.at(0) << "," << fountain_phiBins_.at(1) << "," << fountain_phiBins_.at(2)
                   << "," << fountain_phiBins_.at(3) << "," << fountain_phiBins_.at(4) << "," << fountain_phiBins_.at(5)
-				  << ", phi bins (hybrid and disks): " << fountain_phiBins_.at(6) << "," << fountain_phiBins_.at(7) << "," << fountain_phiBins_.at(8)
+				  << ", phi bins (disks): " << fountain_phiBins_.at(6) << "," << fountain_phiBins_.at(7) << "," << fountain_phiBins_.at(8)
 				  << "," << fountain_phiBins_.at(9) << "," << fountain_phiBins_.at(10) << ","
-				  << ", z bins (barrel, hybrid, disks, nz the same): " << fountain_zBins_.at(0) << "," << fountain_zBins_.at(1) << "," << fountain_zBins_.at(2)
+				  << ", z bins (barrel): " << fountain_zBins_.at(0) << "," << fountain_zBins_.at(1) << "," << fountain_zBins_.at(2)
                   << "," << fountain_zBins_.at(3) << "," << fountain_zBins_.at(4) << "," << fountain_zBins_.at(5)
+				  << ", z bins (disk): " << fountain_zBins_.at(6) << "," << fountain_zBins_.at(7) << "," << fountain_zBins_.at(8)
+				  << "," << fountain_zBins_.at(9) << "," << fountain_zBins_.at(10)
                   << ", nsuperstrips per layer: " << nsuperstripsPerLayer_ << std::endl;
         break;
 
@@ -683,7 +767,7 @@ void SuperstripArbiter::print() {
 				<< "," << fountain_phiBins_.at(3) << "," << fountain_phiBins_.at(4) << "," << fountain_phiBins_.at(5)
 				<< ", z bins: " << fountainflower_zrBins_.at(0) << "," << fountainflower_zrBins_.at(1) << "," << fountainflower_zrBins_.at(2)
 				<< "," << fountainflower_zrBins_.at(3) << "," << fountainflower_zrBins_.at(4) << "," << fountainflower_zrBins_.at(5)
-				<< "[in disk, only 5 positive] using flower superstrip with sf: " << fountain_sf_ << ", nz: " << fountain_nz_
+				<< "[in disk, only 5 positive] using flower superstrip with sf: " << flower_sf_ << ", nz: " << flower_nr_
 				<< ", phi bins: " << fountain_phiBins_.at(6) << "," << fountain_phiBins_.at(7) << "," << fountain_phiBins_.at(8)
 				<< "," << fountain_phiBins_.at(9) << "," << fountain_phiBins_.at(10) << ","
 				<< ", R bins (if layer not present, is 0: " << fountainflower_zrBins_.at(0) << "," << fountainflower_zrBins_.at(1) << "," << fountainflower_zrBins_.at(2)

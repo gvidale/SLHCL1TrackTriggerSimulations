@@ -25,7 +25,7 @@ class SuperstripArbiter {
     unsigned superstripGlobal(unsigned moduleId, float r, float phi, float z, float ds) const;
 
     // Functions
-    void setDefinition(TString definition, unsigned tt, const TriggerTowerMap* ttmap, int flower_charge);
+    void setDefinition(TString definition, unsigned tt, const TriggerTowerMap* ttmap, int flower_charge, float flower_pt);
 
     unsigned nsuperstripsPerLayer() const { return nsuperstripsPerLayer_; }
 
@@ -70,7 +70,11 @@ class SuperstripArbiter {
     float			   flower_reference_pt_; //gev/c
     std::vector<float> flower_firstSS_phizero_; //radius at tower_phi_min that lays on flower curve (first ssID)
     std::vector<float> flower_lastSS_phizero_;
+
     float 			   flower_nr_;
+    float 			   flower_sf_;
+    unsigned           flower_max_nx_;
+    bool 			   flower_opt_;
     float              fountainopt_pt_;
 
     // Trigger tower geometry
@@ -90,6 +94,8 @@ class SuperstripArbiter {
 
     // phiWidths[i] is the phiWidth of the i-th layer
     std::vector<float> phiWidths_;
+    std::vector<float> phiWidths_floweropt_;
+
     // Optimized analytical phiWidths[i] is the phiWidth of the i-th layer (based on PCA constants)
     std::vector<float> phiWidths_opt_lowpt_;
     std::vector<float> phiWidths_opt_highpt_;

@@ -129,7 +129,7 @@ int PatternGenerator::makePatterns(TString src, int flower_charge) {
         float simChargeOverPt = float(simCharge)/simPt;
 
         // FOR HYBRID, FLOWER ONLY: select charge. If the option is different from 1 o -1, pass all. Default is 0 (all)
-        if(flower_charge*simCharge == 1){
+        if(flower_charge*simCharge == -1){
         	++nRead;
         	continue;
         }

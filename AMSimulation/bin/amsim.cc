@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
 
 		//Hybrid, using flower ss or not. To use this, you must use -s ffX_nzX
 		("flower_charge", po::value<int>(&option.flower_charge)->default_value(0), "Select charge sign (+1,-1,0(for passing all)...(USE IN COMBINATION with fountain-flower SS: ffX_nzY)")
-
+		("flower_pt"    , po::value<float>(&option.flower_pt)->default_value(5),   "Select the reference pT of the SS (default 5 Gev/c)")
         // MC truth
         ("minPt"        , po::value<float>(&option.minPt)->default_value(     3.0), "Specify min pt")
         ("maxPt"        , po::value<float>(&option.maxPt)->default_value(999999.0), "Specify max pt")
