@@ -434,8 +434,8 @@ void SuperstripArbiter::setDefinition(TString definition, unsigned tt, const Tri
 				if(flower_opt_==false) fountain_phiBins_.at(i) = phiWidths_.at(i) * fountain_xfactor_[i] * flower_sf_;
 				else			       fountain_phiBins_.at(i) = phiWidths_floweropt_.at(i) * fountain_xfactor_[i] * flower_sf_;
 				unsigned nx = round_to_uint((phiMaxs_.at(i) - phiMins_.at(i)) / fountain_phiBins_.at(i));
-				if (flower_max_nx_ < nx)
-					flower_max_nx_ = nx;
+				if (fountain_max_nx_ < nx)
+					fountain_max_nx_ = nx;
 			}
 
 			if(i<6) fountain_zBins_.at(i) = (zMaxs_.at(i) - zMins_.at(i)) / fountain_nz_;

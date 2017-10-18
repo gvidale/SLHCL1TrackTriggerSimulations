@@ -13,7 +13,7 @@ namespace slhcl1tt {
   class TrackParametersToTT {
   public:
     int get_tt(double phi, double invPt, double eta, double z0, bool apply_pt_cut=true) {
-      const float range_eta[7] = {-2.4,-1.46,-0.8,0,0.8,1.46,2.4}; //GV custom size tower. (to maximize gain using flower)
+      const float range_eta[7] = {-2.4,-1.46,-0.73,0,0.73,1.46,2.4}; //GV custom size tower. (to maximize gain using flower) 1017: 0.73 - 1.46 hybrid.
       constexpr double max_eta = 2.4; //GV 08/21 FIX to include foreward disks (Range L1)
       constexpr double max_z0 = 15.; // [cm]
       constexpr double max_invPt = 1./3;  // [1/GeV]
