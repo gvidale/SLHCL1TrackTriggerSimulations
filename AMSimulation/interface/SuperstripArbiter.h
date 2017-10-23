@@ -10,7 +10,7 @@
 
 namespace slhcl1tt {
 
-  enum SuperstripType {UNKNOWN, FIXEDWIDTH, PROJECTIVE, FOUNTAIN, FOUNTAINOPT,FOUNTAIN_FLOWER};
+  enum SuperstripType {UNKNOWN, FIXEDWIDTH, PROJECTIVE, FOUNTAIN, FOUNTAINOPT,FOUNTAIN_FLOWER, FLOWER_ONLY};
 
 class SuperstripArbiter {
   public:
@@ -43,6 +43,7 @@ class SuperstripArbiter {
     unsigned superstripProjective(unsigned moduleId, float r, float phi, float z, float ds) const;
     unsigned superstripFountain(unsigned moduleId, float r, float phi, float z, float ds) const;
     unsigned superstripFountainFlower(unsigned moduleId, float r, float phi, float z, float ds) const;
+    unsigned superstripFlowerOnly(unsigned moduleId, float r, float phi, float z, float ds) const;
 
     // Member data
     SuperstripType     sstype_;
@@ -76,6 +77,9 @@ class SuperstripArbiter {
     unsigned           flower_max_nx_;
     bool 			   flower_opt_;
     float              fountainopt_pt_;
+    std::vector<float> flower_rMin;
+    std::vector<float> flower_rMax;
+
 
     // Trigger tower geometry
     // modules_[i][j] is the module ID of the i-th layer, j-th module
