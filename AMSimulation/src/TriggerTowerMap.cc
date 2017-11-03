@@ -26,8 +26,8 @@ TriggerTowerMap::TriggerTowerMap() {
 
 // _____________________________________________________________________________
 void TriggerTowerMap::read(TString datadir) {
-    TString csvfile1 = datadir + "trigger_sector_map_oc.csv";
-    TString csvfile2 = datadir + "trigger_sector_boundaries_oc.csv";
+    TString csvfile1 = datadir + "trigger_sector_map_gv.csv";
+    TString csvfile2 = datadir + "trigger_sector_boundaries_gv.csv"; //GV use new boundaries that cover the full modules belonging to tower
 
     readTriggerTowerMap(csvfile1);
 
